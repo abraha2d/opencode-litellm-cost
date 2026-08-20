@@ -1,0 +1,15 @@
+{
+  "name": "opencode-litellm-cost",
+  "version": "0.1.0",
+  "description": "Feeds real LiteLLM per-token pricing into opencode's model cost config",
+  "type": "module",
+  "main": "plugin.js",
+  "author": "Kevin Abraham <kevin@westhousefarm.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abraha2d/opencode-litellm-cost.git"
+  },
+  "homepage": "https://github.com/abraha2d/opencode-litellm-cost#readme",
+  "private": true
+}
