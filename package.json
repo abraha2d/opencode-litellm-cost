@@ -11,5 +11,5 @@
     "url": "git+https://github.com/abraha2d/opencode-litellm-cost.git"
   },
   "homepage": "https://github.com/abraha2d/opencode-litellm-cost#readme",
-  "private": true
+  "private": false
 }
