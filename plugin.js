@@ -24,17 +24,15 @@ export default async function litellmCostPlugin() {
           return;
         }
 
-        for (const [providerID, providerCfg] of Object.entries(
-          cfg.provider ?? {},
-        )) {
+        const updateProvider = async (providerID, providerCfg) => {
           try {
-            if (!providerCfg?.options?.baseURL) continue;
+            if (!providerCfg?.options?.baseURL) return;
             if (
               !providerCfg?.models ||
               typeof providerCfg.models !== "object" ||
               Object.keys(providerCfg.models).length === 0
             )
-              continue;
+              return;
 
             const providerAuth = auth?.[providerID];
             if (
@@ -42,7 +40,7 @@ export default async function litellmCostPlugin() {
               providerAuth.type !== "api" ||
               typeof providerAuth.key !== "string"
             )
-              continue;
+              return;
 
             const base = providerCfg.options.baseURL.replace(/\/+$/, "");
             const url = base + "/model/info";
@@ -58,7 +56,7 @@ export default async function litellmCostPlugin() {
             } finally {
               clearTimeout(timeout);
             }
-            if (!res.ok) continue;
+            if (!res.ok) return;
 
             const body = await res.json();
             const infoList = Array.isArray(body?.data) ? body.data : [];
@@ -120,11 +118,18 @@ export default async function litellmCostPlugin() {
             }
           } catch (err) {
             console.error(
-              `litellm-cost: provider ${providerID} failed:`,
-              err,
+              `litellm-cost: provider ${providerID} failed: ${
+                err?.name ?? "Error"
+              }: ${err?.message ?? String(err)}`,
             );
           }
-        }
+        };
+
+        await Promise.allSettled(
+          Object.entries(cfg.provider ?? {}).map(([providerID, providerCfg]) =>
+            updateProvider(providerID, providerCfg),
+          ),
+        );
       } catch (err) {
         console.error("litellm-cost: config hook failed:", err);
       }
