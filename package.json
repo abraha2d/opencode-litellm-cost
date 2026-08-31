@@ -11,5 +11,18 @@
     "url": "git+https://github.com/abraha2d/opencode-litellm-cost.git"
   },
   "homepage": "https://github.com/abraha2d/opencode-litellm-cost#readme",
-  "private": false
+  "private": false,
+  "scripts": {
+    "test": "node --test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.9.1",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.6"
+  }
 }

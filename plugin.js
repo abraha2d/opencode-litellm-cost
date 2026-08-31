@@ -4,9 +4,10 @@ import os from "node:os";
 
 /**
  * opencode plugin: feed real LiteLLM per-token pricing into model cost config.
- * Only implements the `config` hook. Never throws.
+ * Implements the `config` and `event` hooks. Never throws.
  */
-export default async function litellmCostPlugin() {
+export default async function litellmCostPlugin({ client, directory } = {}) {
+  let pendingToast = null;
   return {
     config: async (cfg) => {
       try {
@@ -25,14 +26,15 @@ export default async function litellmCostPlugin() {
         }
 
         const updateProvider = async (providerID, providerCfg) => {
+          const loaded = [];
           try {
-            if (!providerCfg?.options?.baseURL) return;
+            if (!providerCfg?.options?.baseURL) return loaded;
             if (
               !providerCfg?.models ||
               typeof providerCfg.models !== "object" ||
               Object.keys(providerCfg.models).length === 0
             )
-              return;
+              return loaded;
 
             const providerAuth = auth?.[providerID];
             if (
@@ -40,7 +42,7 @@ export default async function litellmCostPlugin() {
               providerAuth.type !== "api" ||
               typeof providerAuth.key !== "string"
             )
-              return;
+              return loaded;
 
             const base = providerCfg.options.baseURL.replace(/\/+$/, "");
             const url = base + "/model/info";
@@ -56,7 +58,7 @@ export default async function litellmCostPlugin() {
             } finally {
               clearTimeout(timeout);
             }
-            if (!res.ok) return;
+            if (!res.ok) return loaded;
 
             const body = await res.json();
             const infoList = Array.isArray(body?.data) ? body.data : [];
@@ -115,6 +117,11 @@ export default async function litellmCostPlugin() {
               }
 
               modelCfg.cost = cost;
+              loaded.push({
+                model: modelKey,
+                input: cost.input,
+                output: cost.output,
+              });
             }
           } catch (err) {
             console.error(
@@ -123,15 +130,52 @@ export default async function litellmCostPlugin() {
               }: ${err?.message ?? String(err)}`,
             );
           }
+          return loaded;
         };
 
-        await Promise.allSettled(
-          Object.entries(cfg.provider ?? {}).map(([providerID, providerCfg]) =>
-            updateProvider(providerID, providerCfg),
+        const results = await Promise.allSettled(
+          Object.entries(cfg.provider ?? {}).map(
+            async ([providerID, providerCfg]) => ({
+              providerID,
+              loaded: await updateProvider(providerID, providerCfg),
+            }),
           ),
         );
+
+        const loadedProviders = results
+          .filter((r) => r.status === "fulfilled" && r.value.loaded.length > 0)
+          .map((r) => r.value);
+
+        if (loadedProviders.length > 0) {
+          const message = loadedProviders
+            .flatMap(({ providerID, loaded }) =>
+              loaded
+                .filter((m) => m.input !== 0 || m.output !== 0)
+                .map(
+                  (m) =>
+                    `${providerID}/${m.model}: $${m.input.toFixed(2)}/$${m.output.toFixed(2)}`,
+                ),
+            )
+            .join("\n");
+
+          pendingToast = {
+            title: "LiteLLM costs loaded",
+            message,
+            variant: "success",
+            duration: 8000,
+          };
+        }
       } catch (err) {
         console.error("litellm-cost: config hook failed:", err);
+      }
+    },
+    event: async ({ event }) => {
+      if (event?.type && pendingToast && client?.tui?.showToast) {
+        const toast = pendingToast;
+        pendingToast = null;
+        client.tui
+          .showToast({ body: toast, query: { directory } })
+          .catch(() => {});
       }
     },
   };

@@ -17,7 +17,7 @@ It never throws — any failure (missing auth, unreachable proxy, malformed resp
 
 Add the plugin to your `opencode.json`/`opencode.jsonc`:
 
-```jsonc
+```json
 {
   "plugin": ["opencode-litellm-cost"]
 }
@@ -25,7 +25,7 @@ Add the plugin to your `opencode.json`/`opencode.jsonc`:
 
 Or, if running from a local checkout, reference the file path directly:
 
-```jsonc
+```json
 {
   "plugin": ["./plugins/opencode-litellm-cost/plugin.js"]
 }
